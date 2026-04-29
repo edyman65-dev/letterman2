@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Galp Frota — Gerador de Cartas</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --orange: #E85C2A; --orange-light: #FDF0EB; --orange-dark: #C44A1F;
+    --green: #1D9E75;  --green-light: #EAF7F2;
+    --red: #DC3545;    --red-light: #FFF0F0;
+    --gray-50: #F9F9F8; --gray-100: #F0EFED; --gray-200: #E2E1DE;
+    --gray-400: #A8A7A2; --gray-600: #6B6A66; --gray-900: #1A1A18;
+    --radius: 12px; --radius-sm: 8px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--gray-50); color: var(--gray-900); min-height: 100vh; font-size: 15px; }
+  header { background: white; border-bottom: 1px solid var(--gray-200); padding: 0 2rem; height: 60px; display: flex; align-items: center; gap: 14px; position: sticky; top: 0; z-index: 100; }
+  .logo { width: 32px; height: 32px; background: var(--orange); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .logo svg { width: 18px; height: 18px; fill: white; }
+  header h1 { font-size: 15px; font-weight: 600; }
+  header span { font-size: 13px; color: var(--gray-400); }
+  .main { max-width: 760px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  .card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1rem; box-shadow: var(--shadow); }
+  .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 1.25rem; }
+  .step-badge { width: 28px; height: 28px; border-radius: 50%; background: var(--gray-100); border: 1px solid var(--gray-200); font-size: 13px; font-weight: 600; color: var(--gray-600); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+  .step-badge.active { background: var(--orange); border-color: var(--orange); color: white; }
+  .step-badge.done   { background: var(--green);  border-color: var(--green);  color: white; }
+  .card-title { font-size: 15px; font-weight: 600; }
+  .card-subtitle { font-size: 13px; color: var(--gray-400); margin-left: auto; }
+  .upload-zone { border: 1.5px dashed var(--gray-200); border-radius: var(--radius-sm); padding: 2rem; text-align: center; cursor: pointer; transition: all 0.15s; position: relative; }
+  .upload-zone:hover { border-color: var(--orange); background: var(--orange-light); }
+  .upload-zone.has-file { border-style: solid; border-color: var(--green); background: var(--green-light); }
+  .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .upload-icon { width: 36px; height: 36px; background: var(--gray-100); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; }
+  .upload-icon svg { width: 18px; height: 18px; stroke: var(--gray-600); fill: none; stroke-width: 1.5; }
+  .upload-zone.has-file .upload-icon { background: var(--green-light); }
+  .upload-zone.has-file .upload-icon svg { stroke: var(--green); }
+  .upload-label { font-size: 14px; font-weight: 500; display: block; margin-bottom: 4px; }
+  .upload-hint { font-size: 12px; color: var(--gray-400); }
+  .upload-filename { font-size: 13px; color: var(--green); font-weight: 500; margin-top: 4px; }
+  .tpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tpl-item { border: 1px solid var(--gray-200); border-radius: var(--radius-sm); padding: 12px 14px; position: relative; cursor: pointer; transition: border-color 0.15s; }
+  .tpl-item:hover { border-color: var(--orange); }
+  .tpl-item.has-file { border-color: var(--green); background: var(--green-light); }
+  .tpl-item input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .tpl-label { font-size: 12px; font-weight: 500; color: var(--gray-600); display: block; margin-bottom: 2px; }
+  .tpl-name  { font-size: 12px; color: var(--gray-400); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tpl-name.ok { color: var(--green); }
+  .tpl-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gray-200); display: inline-block; margin-right: 6px; vertical-align: middle; }
+  .tpl-dot.ok { background: var(--green); }
+  .lote-row { display: flex; align-items: center; gap: 12px; }
+  .lote-row label { font-size: 14px; color: var(--gray-600); }
+  input[type=number], input[type=text] { border: 1px solid var(--gray-200); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 14px; font-family: 'DM Sans', sans-serif; color: var(--gray-900); background: white; outline: none; transition: border-color 0.15s; }
+  input[type=number]:focus, input[type=text]:focus { border-color: var(--orange); }
+  input[type=number] { width: 80px; text-align: center; font-family: 'DM Mono', monospace; }
+  button { font-family: 'DM Sans', sans-serif; cursor: pointer; border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 500; transition: all 0.15s; }
+  .btn-primary { background: var(--orange); color: white; padding: 10px 20px; }
+  .btn-primary:hover { background: var(--orange-dark); }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { background: var(--gray-200); color: var(--gray-400); cursor: not-allowed; }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+  .stat-box { background: var(--gray-50); border: 1px solid var(--gray-100); border-radius: var(--radius-sm); padding: 12px; text-align: center; }
+  .stat-n { font-size: 26px; font-weight: 600; font-family: 'DM Mono', monospace; line-height: 1; }
+  .stat-l { font-size: 11px; color: var(--gray-400); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .empresa-header { display: grid; grid-template-columns: 2fr 2fr 80px 80px; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--gray-100); margin-bottom: 8px; }
+  .empresa-header span { font-size: 11px; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.05em; }
+  .empresa-row { display: grid; grid-template-columns: 2fr 2fr 80px 80px; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .empresa-nome { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .empresa-row input[type=text] { width: 100%; padding: 7px 10px; font-size: 13px; }
+  .tag { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 100px; }
+  .tag-warn { background: #FEF3C7; color: #92400E; }
+  .tag-ok   { background: var(--green-light); color: var(--green); }
+  .tag-info { background: #EFF6FF; color: #1D4ED8; }
+  .msg { padding: 12px 16px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 12px; display: none; }
+  .msg.show { display: block; }
+  .msg-error   { background: var(--red-light); color: var(--red); border: 1px solid #FECACA; }
+  .msg-success { background: var(--green-light); color: var(--green); border: 1px solid #A7F3D0; }
+  .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .progress-bar-wrap { height: 4px; background: var(--gray-100); border-radius: 2px; overflow: hidden; margin-top: 12px; }
+  .progress-bar { height: 100%; background: var(--orange); border-radius: 2px; transition: width 0.3s; width: 0%; }
+  #section-analise, #section-enderecos, #section-gerar { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div>
+  <h1>Galp Frota <span>/ Gerador de Cartas</span></h1>
+</header>
+<div class="main">
+
+  <!-- Step 1 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="step-badge active" id="badge-1">1</div>
+      <div class="card-title">Ficheiro principal</div>
+      <div class="card-subtitle">Cartões, pins e tags 2026.xlsx</div>
+    </div>
+    <div class="upload-zone" id="zone-principal">
+      <input type="file" id="file-principal" accept=".xlsx,.xls" />
+      <div class="upload-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></div>
+      <span class="upload-label">Clica para carregar o ficheiro principal</span>
+      <span class="upload-hint">Descarrega do SharePoint antes</span>
+      <div class="upload-filename" id="name-principal"></div>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="step-badge" id="badge-2">2</div>
+      <div class="card-title">Templates .docx</div>
+    </div>
+    <div class="tpl-grid">
+      <div class="tpl-item" id="item-com-tag"><input type="file" id="file-com-tag" accept=".docx" /><span class="tpl-label"><span class="tpl-dot" id="dot-com-tag"></span>Cartão com TAG</span><div class="tpl-name" id="name-com-tag">Clica para carregar</div></div>
+      <div class="tpl-item" id="item-sem-tag"><input type="file" id="file-sem-tag" accept=".docx" /><span class="tpl-label"><span class="tpl-dot" id="dot-sem-tag"></span>Cartão sem TAG</span><div class="tpl-name" id="name-sem-tag">Clica para carregar</div></div>
+      <div class="tpl-item" id="item-reval-com"><input type="file" id="file-reval-com" accept=".docx" /><span class="tpl-label"><span class="tpl-dot" id="dot-reval-com"></span>Revalidação com TAG</span><div class="tpl-name" id="name-reval-com">Clica para carregar</div></div>
+      <div class="tpl-item" id="item-reval-sem"><input type="file" id="file-reval-sem" accept=".docx" /><span class="tpl-label"><span class="tpl-dot" id="dot-reval-sem"></span>Revalidação sem TAG</span><div class="tpl-name" id="name-reval-sem">Clica para carregar</div></div>
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="step-badge" id="badge-3">3</div>
+      <div class="card-title">Lote</div>
+    </div>
+    <div class="lote-row">
+      <label>Número do lote:</label>
+      <input type="number" id="input-lote" value="9" min="1" max="99" />
+      <button class="btn-primary" id="btn-analisar" disabled>Analisar</button>
+    </div>
+    <div class="progress-bar-wrap" id="bar-analise-wrap" style="display:none"><div class="progress-bar" id="bar-analise" style="width:60%"></div></div>
+    <div class="msg msg-error" id="msg-analise-erro"></div>
+  </div>
+
+  <!-- Step 4: Resumo -->
+  <div id="section-analise">
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge done">4</div>
+        <div class="card-title">Resumo do lote</div>
+        <div class="card-subtitle" id="lote-badge"></div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-n" id="cnt-com-tag">0</div><div class="stat-l">Com TAG</div></div>
+        <div class="stat-box"><div class="stat-n" id="cnt-sem-tag">0</div><div class="stat-l">Sem TAG</div></div>
+        <div class="stat-box"><div class="stat-n" id="cnt-reval-com">0</div><div class="stat-l">Reval. TAG</div></div>
+        <div class="stat-box"><div class="stat-n" id="cnt-total">0</div><div class="stat-l">Total</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 5: Endereços -->
+  <div id="section-enderecos">
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge active">5</div>
+        <div class="card-title">Endereços em falta</div>
+        <div class="card-subtitle" id="sem-end-badge"></div>
+      </div>
+      <div id="enderecos-container"></div>
+    </div>
+  </div>
+
+  <!-- Step 6: Gerar -->
+  <div id="section-gerar">
+    <div class="card">
+      <div class="card-header">
+        <div class="step-badge active">6</div>
+        <div class="card-title">Gerar cartas</div>
+      </div>
+      <div class="msg msg-error" id="msg-gerar-erro"></div>
+      <div class="msg msg-success" id="msg-gerar-ok"></div>
+      <button class="btn-primary" id="btn-gerar" style="width:100%;padding:12px;font-size:15px;">Gerar e descarregar ZIP</button>
+      <div class="progress-bar-wrap" id="bar-gerar-wrap" style="display:none"><div class="progress-bar" id="bar-gerar"></div></div>
+    </div>
+  </div>
+
+</div>
+<script>
+const $ = id => document.getElementById(id);
+let analiseResult = null;
+
+function setupUpload(inputId, zoneId, nameId, dotId, itemId) {
+  const input = $(inputId), zone = $(zoneId), name = $(nameId), dot = dotId ? $(dotId) : null, item = itemId ? $(itemId) : null;
+  if (!input) return;
+  input.addEventListener('change', () => {
+    const f = input.files[0]; if (!f) return;
+    if (zone) zone.classList.add('has-file');
+    if (item) item.classList.add('has-file');
+    if (name) { name.textContent = f.name; name.classList.add('ok'); }
+    if (dot)  dot.classList.add('ok');
+    checkReady();
+  });
+}
+
+setupUpload('file-principal', 'zone-principal', 'name-principal', null, null);
+setupUpload('file-com-tag',   null, 'name-com-tag',   'dot-com-tag',   'item-com-tag');
+setupUpload('file-sem-tag',   null, 'name-sem-tag',   'dot-sem-tag',   'item-sem-tag');
+setupUpload('file-reval-com', null, 'name-reval-com', 'dot-reval-com', 'item-reval-com');
+setupUpload('file-reval-sem', null, 'name-reval-sem', 'dot-reval-sem', 'item-reval-sem');
+
+function checkReady() {
+  const ok = ['file-principal','file-com-tag','file-sem-tag','file-reval-com','file-reval-sem'].every(id => $(id).files[0]);
+  $('btn-analisar').disabled = !ok;
+  if (ok) $('badge-3').classList.add('active');
+}
+
+$('btn-analisar').addEventListener('click', async () => {
+  const btn = $('btn-analisar'), errEl = $('msg-analise-erro');
+  errEl.classList.remove('show');
+  btn.innerHTML = '<span class="spinner"></span> A analisar...';
+  btn.disabled = true;
+  $('bar-analise-wrap').style.display = 'block';
+  const fd = new FormData();
+  fd.append('principal', $('file-principal').files[0]);
+  fd.append('lote', $('input-lote').value);
+  try {
+    const res  = await fetch('/api/analisar', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!res.ok) {
+      errEl.textContent = data.erro + (data.disponiveis ? ' Disponíveis: ' + data.disponiveis.join(', ') : '');
+      errEl.classList.add('show');
+    } else {
+      analiseResult = data;
+      renderAnalise(data);
+    }
+  } catch(e) {
+    errEl.textContent = 'Erro: ' + e.message;
+    errEl.classList.add('show');
+  }
+  btn.innerHTML = 'Analisar'; btn.disabled = false;
+  $('bar-analise-wrap').style.display = 'none';
+});
+
+function renderAnalise(data) {
+  $('cnt-com-tag').textContent   = data.contagem.cartao_com_tag;
+  $('cnt-sem-tag').textContent   = data.contagem.cartao_sem_tag;
+  $('cnt-reval-com').textContent = data.contagem.revalidacao_com_tag;
+  $('cnt-total').textContent     = data.total;
+  $('lote-badge').innerHTML = `<span class="tag tag-info">Lote ${data.lote} · ${data.total} registos</span>`;
+  $('section-analise').style.display = 'block';
+
+  const sem = data.sem_endereco;
+  if (sem.length > 0) {
+    $('sem-end-badge').innerHTML = `<span class="tag tag-warn">${sem.length} em falta</span>`;
+    const c = $('enderecos-container');
+    c.innerHTML = `<div class="empresa-header"><span>Empresa</span><span>Avenida</span><span>Nº</span><span>Postal</span></div>`;
+    sem.forEach(nome => {
+      const row = document.createElement('div');
+      row.className = 'empresa-row'; row.dataset.empresa = nome;
+      row.innerHTML = `<div class="empresa-nome" title="${nome}">${nome}</div><input type="text" placeholder="Avenida..." data-field="avenida" /><input type="text" placeholder="Nº" data-field="numero" /><input type="text" placeholder="Postal" data-field="postal" />`;
+      c.appendChild(row);
+    });
+  } else {
+    $('sem-end-badge').innerHTML = `<span class="tag tag-ok">Todos os endereços preenchidos</span>`;
+    $('enderecos-container').innerHTML = `<p style="font-size:13px;color:var(--gray-400);text-align:center;padding:1rem 0">Sem endereços em falta para este lote.</p>`;
+  }
+  $('section-enderecos').style.display = 'block';
+  $('section-gerar').style.display = 'block';
+}
+
+$('btn-gerar').addEventListener('click', async () => {
+  const btn = $('btn-gerar'), errEl = $('msg-gerar-erro'), okEl = $('msg-gerar-ok');
+  errEl.classList.remove('show'); okEl.classList.remove('show');
+  const novos = {};
+  document.querySelectorAll('.empresa-row').forEach(row => {
+    novos[row.dataset.empresa] = {
+      avenida: row.querySelector('[data-field="avenida"]').value.trim(),
+      numero:  row.querySelector('[data-field="numero"]').value.trim(),
+      postal:  row.querySelector('[data-field="postal"]').value.trim(),
+    };
+  });
+  const fd = new FormData();
+  fd.append('principal',      $('file-principal').files[0]);
+  fd.append('tpl_com_tag',    $('file-com-tag').files[0]);
+  fd.append('tpl_sem_tag',    $('file-sem-tag').files[0]);
+  fd.append('tpl_reval_com',  $('file-reval-com').files[0]);
+  fd.append('tpl_reval_sem',  $('file-reval-sem').files[0]);
+  fd.append('lote',           $('input-lote').value);
+  fd.append('enderecos_novos', JSON.stringify(novos));
+  btn.innerHTML = '<span class="spinner"></span> A gerar cartas...'; btn.disabled = true;
+  $('bar-gerar-wrap').style.display = 'block';
+  let prog = 0;
+  const bar = $('bar-gerar');
+  const timer = setInterval(() => { prog = Math.min(prog + Math.random()*8, 85); bar.style.width = prog + '%'; }, 300);
+  try {
+    const res = await fetch('/api/gerar', { method: 'POST', body: fd });
+    clearInterval(timer); bar.style.width = '100%';
+    if (!res.ok) {
+      const data = await res.json();
+      errEl.textContent = data.erro || 'Erro ao gerar cartas.'; errEl.classList.add('show');
+    } else {
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url;
+      a.download = `Cartas_Lote${$('input-lote').value}.zip`; a.click();
+      URL.revokeObjectURL(url);
+      okEl.textContent = `ZIP gerado com ${analiseResult?.total || ''} cartas!`; okEl.classList.add('show');
+    }
+  } catch(e) { clearInterval(timer); errEl.textContent = 'Erro: ' + e.message; errEl.classList.add('show'); }
+  setTimeout(() => { bar.style.width='0%'; $('bar-gerar-wrap').style.display='none'; }, 800);
+  btn.innerHTML = 'Gerar e descarregar ZIP'; btn.disabled = false;
+});
+
+// Seed automático ao abrir a página
+fetch('/api/seed', { method: 'POST' }).catch(() => {});
+</script>
+</body>
+</html>
